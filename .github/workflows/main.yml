@@ -19,13 +19,12 @@ jobs:
         uses: actions/checkout@v4
 
       # Fetches the official zygisk.hpp + companion headers so you don't
-      # have to commit them yourself (license stays with the upstream repo).
-      - name: Fetch Zygisk API headers
+      # have to commit them yourself (license stays with the- name: Fetch Zygisk API headers
+      - name: Fetch Zygisk API
+   headers
         run: |
-          git clone --depth 1 https://github.com/topjohnwu/zygisk-module-sample.git /tmp/zygisk-sample
-          # main.cpp does `#include "zygisk.hpp"` and CMakeLists.txt's include
-          # path is src/ itself, so the header goes flat into src/, not a subdir.
-          cp /tmp/zygisk-sample/module/jni/zygisk/zygisk.hpp src/zygisk.hpp
+     git clone --depth 1 https://github.com/topjohnwu/zygisk-module-sample.git /tmp/zygisk-sample
+     find /tmp/zygisk-sample -name zygisk.hpp
 
       - name: Set up Android NDK
         uses: nttld/setup-ndk@v1
