@@ -20,9 +20,8 @@ jobs:
 
       # Fetches the official zygisk.hpp + companion headers so you don't
       # have to commit them yourself (license stays with the- name: Fetch Zygisk API headers
-      - name: Fetch Zygisk API
-   headers
-        run: |
+    - name: Fetch Zygisk API headers    
+    run: |
      git clone --depth 1 https://github.com/topjohnwu/zygisk-module-sample.git /tmp/zygisk-sample
      find /tmp/zygisk-sample -name zygisk.hpp
 
