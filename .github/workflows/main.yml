@@ -1,0 +1,73 @@
+name: Build Zygisk .so
+
+# Triggers: push to main, manual run, or PR (build-check only)
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}   # lets you trigger manually from the Actions tab
+
+jobs:
+  build-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Fetches the official zygisk.hpp + companion headers so you don't
+      # have to commit them yourself (license stays with the upstream repo).
+      - name: Fetch Zygisk API headers
+        run: |
+          git clone --depth 1 https://github.com/topjohnwu/zygisk-module-sample.git /tmp/zygisk-sample
+          # main.cpp does `#include "zygisk.hpp"` and CMakeLists.txt's include
+          # path is src/ itself, so the header goes flat into src/, not a subdir.
+          cp /tmp/zygisk-sample/module/jni/zygisk/zygisk.hpp src/zygisk.hpp
+
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          add-to-path: true
+
+      - name: Configure (CMake)
+        run: |
+          cmake -S src -B build \
+            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-29 \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Stage output into module layout
+        run: |
+          mkdir -p out/zygisk-perf-suite/zygisk/arm64-v8a
+          cp -r module.prop customize.sh post-fs-data.sh service.sh uninstall.sh \
+                META-INF config webroot out/zygisk-perf-suite/
+          cp build/libzygisk_perf_suite.so \
+                out/zygisk-perf-suite/zygisk/arm64-v8a/libzygisk_perf_suite.so
+
+      - name: Zip flashable module
+        run: |
+          cd out/zygisk-perf-suite
+          zip -r ../../zygisk-perf-suite.zip .
+
+      # Two artifacts: the raw .so (if you just want to drop it into an
+      # existing local copy) and the full ready-to-flash module zip.
+      - name: Upload .so artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libzygisk_perf_suite-arm64-v8a
+          path: build/libzygisk_perf_suite.so
+
+      - name: Upload flashable module zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: zygisk-perf-suite-flashable
+          path: zygisk-perf-suite.zip
